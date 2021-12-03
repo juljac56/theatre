@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <p> Hello world </p>
+
+    <label>Opération</label>
+    <input type="text" id="a"> + <input type="text" id="b">
+    <input id="ajax-call" type="submit" value="Calculer">
+    
+    <!-- Nous afficherons le résultat de l'opération ici -->
+    <p id="ajax"></p>
+
+    <button id="record"> Record</button>
+
+    <div id="sound-clip"></div>
+
+
+    <script>
+        
+        document.querySelector("#ajax-call").addEventListener("click", event => {
+            event.preventDefault();
+            let formData = new FormData();
+            formData.append("a", document.querySelector("#a").value);
+            formData.append("b", document.querySelector("#b").value);
+            //let csrfTokenValue = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const request = new Request('{% url "compute" %}', {
+                method: 'POST',
+                body: formData,
+                //headers: {'X-CSRFToken': csrfTokenValue}
+            });
+            fetch(request)
+                .then(response => response.json())
+                .then(result => {
+                    console.log(result)
+                    const resultElement = document.querySelector("#ajax");
+                    resultElement.innerHTML = result["operation_result"];
+                })
+        })
+
+
+// Set up the AudioContext.
+
+// Top-level variable keeps track of whether we are recording or not.
+let recording = false;
+
+// Ask user for access to the microphone.
+if (navigator.mediaDevices) {
+  navigator.mediaDevices.getUserMedia({"audio": true}).then((stream) => {
+
+    // Instantiate the media recorder.
+    const mediaRecorder = new MediaRecorder(stream);
+    // Create a buffer to store the incoming data.
+    let chunks = [];
+    mediaRecorder.ondataavailable = (event) => {
+      chunks.push(event.data);
+    }
+
+    // When you stop the recorder, create a empty audio clip.
+    mediaRecorder.onstop = (event) => {
+      const audio = new Audio();
+      audio.setAttribute("controls", "");
+      //$("#sound-clip").append(audio);
+      //$("#sound-clip").append("<br />");
+
+      // Combine the audio chunks into a blob, then point the empty audio clip to that blob.
+      const blob = new Blob(chunks, {"type": "audio/ogg; codecs=opus"});
+      var wavfromblob = new File([blob], "incomingaudioclip.wav");
+      cons
+      audio.src = window.URL.createObjectURL(blob);
+      recording = false;
+      var fd = new FormData();
+      var filename = new Date().toISOString();
+      fd.append("audio_data",wavfromblob, filename);
+      fd.append("test","ok test")
+      console.log(fd.values)
+
+      // Clear the `chunks` buffer so that you can record again.
+      
+      const request = new Request('{% url "compute" %}', {
+        method: 'POST',
+        body: fd,
+        //headers: {'X-CSRFToken': csrfTokenValue}
+    });
+
+    chunks = [];
+    fetch(request)
+        .then(response => response.json())
+        .then(result => {
+            console.log(result)
+            const resultElement = document.querySelector("#ajax");
+            resultElement.innerHTML = result["operation_result"];
+        })
+
+    };
+
+    // Set up event handler for the "Record" button.
+    document.querySelector("#record").addEventListener("click", event => {
+      if (recording) {
+        mediaRecorder.stop();
+        recording = false;
+
+      } else {
+        const audioCtx = new AudioContext();
+        mediaRecorder.start();
+        recording = true;
+      }
+    });
+
+  }).catch((err) => {
+    // Throw alert when the browser is unable to access the microphone.
+    alert("Oh no! Your browser cannot access your computer's microphone.");
+  });
+} else {
+  // Throw alert when the browser cannot access any media devices.
+  alert("Oh no! Your browser cannot access your computer's microphone. Please update your browser.");
+}
+
+
+
+
+
+
+
+        </script>
+</body>
+</html>
